@@ -152,12 +152,18 @@ AC_DEFINE_UNQUOTED([LABEL_TYPE], [$label_type], [label_type])
 #
 # Supported:
 #
-# reference, bulldozer, piledriver, excavator, zen, core2, sandybridge,
-# haswell, skx1, skx2, knl, auto
+# reference, auto,
+# core2, sandybridge, haswell, skx1, skx2, knl,
+# bulldozer, piledriver, excavator, zen,
+# armv7a, armv8a, thunderx2, armv8a_sve[256,512]
+#
+# Note: As TBLIS requires block sizes to be constexpr,
+#  we have to instantiate VL at compile time, currently
+#  256 (Neoverse) and 512 (A64FX).
 #
 # Possible with porting from BLIS:
 #
-# armv7a, armv8a, bgq, cortex-a15, cortex-a9, power7, loongson3a, mic
+# loongson3a, power7, bgq, mic
 #
 
 AC_ARG_ENABLE([config],
@@ -166,11 +172,16 @@ AC_ARG_ENABLE([config],
   
                           possible values are:
                           
-                          reference, bulldozer, piledriver, excavator, zen,
-                          core2, sandybridge, haswell, skx1, skx2, knl, auto
+                          reference, auto,
+                          core2, sandybridge, haswell, skx1, skx2, knl,
+                          bulldozer, piledriver, excavator, zen,
+                          armv7a, armv8a, thunderx2, armv8a_sve256, armv8a_sve512
 
                           the following meta-configurations are also available:
  
+                          arm32 = armv7a,
+                          arm64 = armv8a,thunderx2,armv8a_sve256,armv8a_sve512
+                          armsve = armv8a_sve256,armv8a_sve512
                           skx = skx1,skx2
                           intel = core2,sandybridge,haswell,skx,knl
                           amd = bulldozer,piledriver,excavator,zen
@@ -185,9 +196,9 @@ if echo $enable_config | grep -q auto; then
     AC_CHECK_DEFINE([_M_X64], [enable_config=x86])
     AC_CHECK_DEFINE([__i386], [enable_config=x86])
     AC_CHECK_DEFINE([_M_IX86], [enable_config=x86])
-#    AC_CHECK_DEFINE([__aarch64__], [enable_config=arm])
-#    AC_CHECK_DEFINE([__arm__], [enable_config=arm])
-#    AC_CHECK_DEFINE([_M_ARM], [enable_config=arm])
+    AC_CHECK_DEFINE([__aarch64__], [enable_config=arm64])
+    AC_CHECK_DEFINE([__arm__], [enable_config=arm32])
+    AC_CHECK_DEFINE([_M_ARM], [enable_config=arm32])
 #    AC_CHECK_DEFINE([__powerpc64__], [enable_config=power7])
 #    AC_CHECK_DEFINE([__ppc64__], [enable_config=power7])
 #    AC_CHECK_DEFINE([__PPC64__], [enable_config=power7])
@@ -208,10 +219,12 @@ configs=`echo $enable_config | sed 's/x86/intel,amd/' \
                              | sed 's/amd/bulldozer,piledriver,excavator,zen/' \
                              | sed 's/skx,/skx1,skx2,/' \
                              | sed 's/skx$/skx1,skx2/' \
+                             | sed 's/arm64/armv8a,thunderx2,armv8a_sve256,armv8a_sve512/' \
+                             | sed 's/arm32/armv7a/' \
                              | sed 's/,/ /g'`
 
 for config in $configs; do
-    if ( echo $config | $EGREP -qv '^(reference|core2|sandybridge|haswell|skx1|skx2|knl|bulldozer|piledriver|excavator|zen)$' ); then
+    if ( echo $config | $EGREP -qv '^(reference|core2|sandybridge|haswell|skx1|skx2|knl|bulldozer|piledriver|excavator|zen|armv7a|armv8a|thunderx2|armv8a_sve256|armv8a_sve512)$' ); then
         AC_MSG_ERROR([Unknown configuration $config])
     fi
 done
@@ -415,6 +428,9 @@ AC_MSG_RESULT([$configs])
 
 AM_CONDITIONAL(ENABLE_ARMV7A, [echo $configs | grep -q armv7a])
 AM_CONDITIONAL(ENABLE_ARMV8A, [echo $configs | grep -q armv8a])
+AM_CONDITIONAL(ENABLE_THUNDERX2, [echo $configs | grep -q thunderx2])
+AM_CONDITIONAL(ENABLE_ARMV8A_SVE256, [echo $configs | grep -q armv8a_sve256])
+AM_CONDITIONAL(ENABLE_ARMV8A_SVE512, [echo $configs | grep -q armv8a_sve512])
 AM_CONDITIONAL(ENABLE_BGQ, [echo $configs | grep -q bgq])
 AM_CONDITIONAL(ENABLE_BULLDOZER, [echo $configs | grep -q bulldozer])
 AM_CONDITIONAL(ENABLE_EXCAVATOR, [echo $configs | grep -q excavator])
